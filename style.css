@@ -1,0 +1,24 @@
+
+body {
+    font-family: Helvetica, Arial, sans-serif;
+}
+
+table {
+    margin-top: 25pt;
+    margin-bottom: 5pt;
+    border-collapse: collapse;
+}
+
+td, th {
+    padding: 1pt 20pt 1pt 1pt;
+}
+
+table:last-child tr td,th {
+    text-align: left;
+}
+table:last-child tr:last-child td {
+    text-align: right;
+}
+table:last-child tr:last-child td:last-child {
+    text-align: left;
+}

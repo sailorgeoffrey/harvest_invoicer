@@ -7,6 +7,7 @@ This script connects to your Harvest account and generates invoices for the mont
 The script will prompt you for the account ID and token on the first run.
 The token will be encrypted and saved in your keychain.
 2. Use PIP to install the requirements.txt
+3. Update template.md to use your details instead of mine.
 
 ## Usage
 The command takes an optional month as a command line argument.  It is in the format YYYYMM.

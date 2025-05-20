@@ -11,6 +11,6 @@ The token will be encrypted and saved in your keychain.
 ## Usage
 The command takes an optional date as a command line argument.  It is in the format YYYYMM.
 It will prompt you for this if you don't provide it.  On the first run it will ask you for
-your daily rate to calculate the totals.
+your hourly rate to calculate the totals.
 
     python invoicer.py [date]

@@ -121,7 +121,7 @@ if __name__ == '__main__':
             description = config.get("Descriptions", client_key)
         except (configparser.NoSectionError, configparser.NoOptionError):
             description = (input(
-                f"Please enter a description for your work at {client['client_name']}. [Press enter for default \"Development and consulting services.\"]: ").strip()
+                f"Please enter a description for your work at {client['client_name']}. Press enter for \"{DEFAULT_SERVICE_DESCRIPTION}\": ").strip()
                            or DEFAULT_SERVICE_DESCRIPTION)
             if input(
                     f"Would you like to save this description and not ask for {client['client_name']} in the future? (y/n) ") == "y":

@@ -1,4 +1,4 @@
 /.venv/
 /.idea/
-/config.ini
+/.invoicer_config.ini
 *_invoice.pdf

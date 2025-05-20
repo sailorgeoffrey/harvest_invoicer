@@ -10,7 +10,6 @@ Czech Republic
 *geoffrey.chandler@aboutobjects.com*  
 +420 755 075 035
 
-**Robert E Leonard, CEO**  
 **About Objects**  
 11911 Freedom Drive, Suite 700  
 Reston, VA 20190  
@@ -29,6 +28,6 @@ United States of America
 | Client | Hours | Description | Item Total |
 |:-------|:------|-------------|-----------:|
 {% for item in items %}
-| {{item.client}} | {{item.hours}} | Development and consulting services. | {{item.total}} |
+| {{item.client}} | {{item.hours}} | {{item.description}} | {{item.total}} |
 {% endfor %}
 | | |           **Total:** | {{invoice.total}} |

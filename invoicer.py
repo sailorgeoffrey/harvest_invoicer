@@ -13,29 +13,17 @@ from jinja2 import Template
 from markdown_it import MarkdownIt
 from markdown_pdf import MarkdownPdf, Section
 
+CONFIG_FILE = '.invoicer_config.ini'
+
 config = configparser.ConfigParser()
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 
-def generate_markdown(start_date, end_date, invoice_rows, hourly_rate, total):
-    due_fn = lambda date: date + +timedelta(days=45)
-    formatted_invoice = {
-        "date": (end_date + timedelta(days=1)).strftime("%d %b %Y"),
-        "start_date": start_date.strftime("%d %b %Y"),
-        "end_date": end_date.strftime("%d %b %Y"),
-        "rate": locale.currency(hourly_rate),
-        "terms": "Net 45",
-        "due": due_fn(end_date).strftime("%d %b %Y"),
-        "total": locale.currency(total)
-    }
-
-    # render the template
-    with open('template.md', 'r') as template_file:
-        template = Template(template_file.read(), trim_blocks=True)
-    return template.render(invoice=formatted_invoice, items=invoice_rows)
-
-
 def convert_md_to_html(markdown):
+    """Takes Markdown text and converts it to an HTML document.
+    Use this to preview the rendered Markdown and adjust CSS.
+    There is code commented at the bottom to use this instead of PDF.
+    """
     body = (
         MarkdownIt('commonmark', {'breaks': True, 'html': True})
         .enable('table')
@@ -66,6 +54,8 @@ def convert_md_to_html(markdown):
 
 
 def convert_markdown_to_pdf(markdown):
+    """Takes Markdown text and converts it to a PDF document.
+    """
     pdf = MarkdownPdf()
     pdf.add_section(
         Section(markdown),
@@ -74,21 +64,21 @@ def convert_markdown_to_pdf(markdown):
     return pdf
 
 
-# Press the green button in the gutter to run the script.
+# The main method optionally takes an argument for the month to invoice.
 if __name__ == '__main__':
 
     input_month = sys.argv[-1]
     if len(input_month) != 6 or not input_month.isdigit():
         input_month = input("Enter invoice month (YYYYMM): ")
 
-    if os.path.isfile("config.ini"):
-        config.read('config.ini')
+    if os.path.isfile(".invoicer_config.ini"):
+        config.read(CONFIG_FILE)
     else:
         account_id = input("Please enter your Harvest account ID.\n")
         config['Harvest'] = {'account_id': account_id}
         rate_str = input("Please enter your hourly rate.\n")
         config['Billing'] = {'rate': rate_str}
-        with open('config.ini', 'w') as configfile:
+        with open(CONFIG_FILE, 'w') as configfile:
             config.write(configfile)
 
     key = keyring.get_password("invoicer", "harvest_key")
@@ -102,18 +92,25 @@ if __name__ == '__main__':
     end_exclusive = (start + timedelta(days=32)).replace(day=1)
     end_inclusive = datetime(year, month, calendar.monthrange(year, month)[1])
     rate: int = int(config.get('Billing', 'rate'))
-    resp = requests.get(url="https://api.harvestapp.com/v2/reports/time/clients",
-                        headers={
-                            "Accept": "application/json",
-                            "Content-Type": "application/json",
-                            "Harvest-Account-Id": config.get('Harvest', 'account_id'),
-                            "User-Agent": "Invoicer (geoffc@gmail.com)",
-                            "Authorization": "Bearer " + key,
-                        },
-                        params={
-                            "from": start.strftime("%Y%m%d"),
-                            "to": end_exclusive.strftime("%Y%m%d"),
-                        })
+    resp = requests.get(
+        url="https://api.harvestapp.com/v2/reports/time/clients",
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Harvest-Account-Id": config.get('Harvest', 'account_id'),
+            "User-Agent": "Invoicer (geoffc@gmail.com)",
+            "Authorization": "Bearer " + key,
+        },
+        params={
+            "from": start.strftime("%Y%m%d"),
+            "to": end_exclusive.strftime("%Y%m%d"),
+        }
+    )
+    if resp.status_code != 200:
+        print(resp.text)
+        exit(1)
+
+    # Loop through each client for the month and create line items and a running total for the invoice.
     invoice_total = 0
     items = []
     for client in json.loads(resp.text)["results"]:
@@ -124,7 +121,7 @@ if __name__ == '__main__':
             description = input(f"Please enter a description for your work at {client['client_name']}: \n")
             if input("Would you like to save this description? (y/n) ") == "y":
                 config['Descriptions'] = {client_key: description}
-                with open('config.ini', 'w') as configfile:
+                with open(CONFIG_FILE, 'w') as configfile:
                     config.write(configfile)
         line_total = rate * int(client['total_hours'])
         items.append({
@@ -135,7 +132,23 @@ if __name__ == '__main__':
         })
         invoice_total = invoice_total + line_total
 
-    md = generate_markdown(start, end_inclusive, items, rate, invoice_total)
+    # Create the invoice headers and common elements.
+    due_fn = lambda date: date + +timedelta(days=45)
+    invoice = {
+        "date": (end_inclusive + timedelta(days=1)).strftime("%d %b %Y"),
+        "start_date": start.strftime("%d %b %Y"),
+        "end_date": end_inclusive.strftime("%d %b %Y"),
+        "rate": locale.currency(rate),
+        "terms": "Net 45",
+        "due": due_fn(end_inclusive).strftime("%d %b %Y"),
+        "total": locale.currency(invoice_total)
+    }
+
+    # render the template
+    with open('template.md', 'r') as template_file:
+        template = Template(template_file.read(), trim_blocks=True)
+    md = template.render(invoice=invoice, items=items)
+
     convert_markdown_to_pdf(md).save(input_month + "_invoice.pdf")
 
     # output_file = codecs.open(input_month + "_invoice.html", "w", "utf-8")

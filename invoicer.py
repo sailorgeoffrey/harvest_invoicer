@@ -12,7 +12,8 @@ from jinja2 import Template
 from markdown_it import MarkdownIt
 from markdown_pdf import MarkdownPdf, Section
 
-DEFAULT_SERVICE_DESCRIPTION = "Development and consulting services."
+# Default description for work.  You can change this per client in the config file. The script will ask for each client.
+DESCRIPTION = "Development and consulting services."
 
 CONFIG_FILE = '.invoicer_config.ini'
 
@@ -122,21 +123,21 @@ if __name__ == '__main__':
     invoice_total = 0
     items = []
     for client in json.loads(resp.text)["results"]:
-        client_key = client['client_name'].replace(" ", "_").lower()
+        client_name = client['client_name']
+        client_key = client_name.replace(" ", "_").lower()
         try:
             description = config.get("Descriptions", client_key)
         except (configparser.NoSectionError, configparser.NoOptionError):
-            description = (input(
-                f"Please enter a description for your work at {client['client_name']}. Press enter for \"{DEFAULT_SERVICE_DESCRIPTION}\": ").strip()
-                           or DEFAULT_SERVICE_DESCRIPTION)
-            if input(
-                    f"Would you like to save this description and not ask for {client['client_name']} in the future? (y/n) ") == "y":
+            p1 = f"Please enter a description for your work at {client_name}. Press enter for \"{DESCRIPTION}\": "
+            description = (input(p1).strip() or DESCRIPTION)
+            p2 = f"Would you like to save this description and not ask for {client_name} in the future? (y/n) "
+            if input(p2) == "y":
                 config['Descriptions'] = {client_key: description}
                 with open(CONFIG_FILE, 'w') as configfile:
                     config.write(configfile)
         line_total = rate * int(client['total_hours'])
         items.append({
-            "client": client['client_name'],
+            "client": client_name,
             "hours": client['total_hours'],
             "description": description,
             "total": locale.currency(line_total),

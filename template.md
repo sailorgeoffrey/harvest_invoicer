@@ -29,6 +29,6 @@ United States of America
 | Client | Hours | Description | Item Total |
 |:-------|:------|-------------|-----------:|
 {% for item in items %}
-| {{item.client}} | {{item.hours}} | {{item.description}} | {{item.total}} |
+| {{item.client}} | {{item.hours}} | Development and consulting services. | {{item.total}} |
 {% endfor %}
 | | |           **Total:** | {{invoice.total}} |

@@ -1,25 +1,38 @@
 import calendar
-import csv
+import configparser
+import json
 import locale
+import sys
 from datetime import timedelta, datetime
+
+import keyring
+import os
+import requests
 
 from jinja2 import Template
 from markdown_it import MarkdownIt
 from markdown_pdf import MarkdownPdf, Section
 
-import config
+config = configparser.ConfigParser()
+
+descriptions = {
+    'AstraZeneca': "Development and consulting services.",
+    'Evinova': "Development and consulting services.",
+    'About Objects': "Admin"
+}
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 
-def generate_markdown(start_date, end_date, invoice_rows, total):
+def generate_markdown(start_date, end_date, invoice_rows, hourly_rate, total):
+    due_fn = lambda date: date + +timedelta(days=45)
     formatted_invoice = {
         "date": (end_date + timedelta(days=1)).strftime("%d %b %Y"),
         "start_date": start_date.strftime("%d %b %Y"),
         "end_date": end_date.strftime("%d %b %Y"),
-        "rate": locale.currency(config.rate),
-        "terms": config.terms,
-        "due": config.due_fn(end_date).strftime("%d %b %Y"),
+        "rate": locale.currency(hourly_rate),
+        "terms": "Net 45",
+        "due": due_fn(end_date).strftime("%d %b %Y"),
         "total": locale.currency(total)
     }
 
@@ -27,7 +40,6 @@ def generate_markdown(start_date, end_date, invoice_rows, total):
     with open('template.md', 'r') as template_file:
         template = Template(template_file.read(), trim_blocks=True)
     return template.render(invoice=formatted_invoice, items=invoice_rows)
-
 
 def convert_md_to_html(markdown):
     body = (
@@ -71,37 +83,58 @@ def convert_markdown_to_pdf(markdown):
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
-    invoices = {}
-    totals = {}
-    with open("input.csv", 'r') as file:
-        csvreader = csv.reader(file, delimiter=';')
-        header = next(csvreader)
-        for row in csvreader:
-            key = row[0] + row[1]
-            line_total = config.rate * int(row[3])
-            item = {
-                "client": row[2] or config.defaults.get("client"),
-                "hours": int(row[3]),
-                "description": row[4] or config.defaults.get("description"),
-                "total": locale.currency(line_total),
-            }
-            if key not in invoices:
-                invoices[key] = [item]
-                totals[key] = line_total
-            else:
-                invoices[key].append(item)
-                totals[key] += line_total
+    input_month = sys.argv[-1]
+    if len(input_month) != 6 or not input_month.isdigit():
+        input_month = input("Enter invoice month (YYYYMM): ")
 
-    for key in invoices.keys():
-        invoice = invoices[key]
-        year = int(key[:4])
-        month = int(key[-2:])
-        start = datetime(year, month, 1)
-        end = datetime(year, month, calendar.monthrange(year, month)[1])
-        md = generate_markdown(start, end, invoice, totals[key])
+    if os.path.isfile("config.ini"):
+        config.read('config.ini')
+    else:
+        account_id = input("Please enter your Harvest account ID.\n")
+        config['Harvest'] = {'account_id': account_id}
+        rate_str = input("Please enter your hourly rate.\n")
+        config['Billing'] = {'rate': rate_str}
+        with open('config.ini', 'w') as configfile:
+            config.write(configfile)
 
-        convert_markdown_to_pdf(md).save(end.strftime("%Y%m") + "_invoice.pdf")
+    key = keyring.get_password("invoicer", "harvest_key")
+    if key is None:
+        key = input("Please enter your Harvest API key.\n")
+        keyring.set_password("invoicer", "harvest_key", key)
 
-        # output_file = codecs.open(end.strftime("%Y%m") + "_invoice.html", "w", "utf-8")
-        # output_file.write(convert_md_to_html(md))
-        # output_file.close()
+    year = int(input_month[:4])
+    month = int(input_month[-2:])
+    start = datetime(year, month, 1)
+    end_exclusive = (start + timedelta(days=32)).replace(day=1)
+    end_inclusive = datetime(year, month, calendar.monthrange(year, month)[1])
+    rate: int = int(config.get('Billing', 'rate'))
+    resp = requests.get(url="https://api.harvestapp.com/v2/reports/time/clients",
+                        headers={
+                            "Accept": "application/json",
+                            "Content-Type": "application/json",
+                            "Harvest-Account-Id": config.get('Harvest', 'account_id'),
+                            "User-Agent": "Invoicer (geoffc@gmail.com)",
+                            "Authorization": "Bearer " + key,
+                        },
+                        params={
+                            "from": start.strftime("%Y%m%d"),
+                            "to": end_exclusive.strftime("%Y%m%d"),
+                        })
+    invoice_total = 0
+    items = []
+    for client in json.loads(resp.text)["results"]:
+        line_total = rate * int(client['total_hours'])
+        items.append({
+            "client": client['client_name'],
+            "hours": client['total_hours'],
+            "description": descriptions.get(client['client_name']),
+            "total": locale.currency(line_total),
+        })
+        invoice_total = invoice_total + line_total
+
+    md = generate_markdown(start, end_inclusive, items, rate, invoice_total)
+    convert_markdown_to_pdf(md).save(input_month + "_invoice.pdf")
+
+    # output_file = codecs.open(input_month + "_invoice.html", "w", "utf-8")
+    # output_file.write(convert_md_to_html(md))
+    # output_file.close()

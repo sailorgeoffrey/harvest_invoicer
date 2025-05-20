@@ -1,4 +1,4 @@
-# AO Invoice Generator
+# Harvest Invoice Generator
 
 This script connects to your Harvest account and generates invoices for the month.
 

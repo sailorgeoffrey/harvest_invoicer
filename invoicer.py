@@ -13,6 +13,8 @@ from jinja2 import Template
 from markdown_it import MarkdownIt
 from markdown_pdf import MarkdownPdf, Section
 
+DEFAULT_SERVICE_DESCRIPTION = "Development and consulting services."
+
 CONFIG_FILE = '.invoicer_config.ini'
 
 config = configparser.ConfigParser()
@@ -117,9 +119,12 @@ if __name__ == '__main__':
         client_key = client['client_name'].replace(" ", "_").lower()
         try:
             description = config.get("Descriptions", client_key)
-        except configparser.NoSectionError:
-            description = input(f"Please enter a description for your work at {client['client_name']}: \n")
-            if input("Would you like to save this description? (y/n) ") == "y":
+        except (configparser.NoSectionError, configparser.NoOptionError):
+            description = (input(
+                f"Please enter a description for your work at {client['client_name']}. [Press enter for default \"Development and consulting services.\"]: ").strip()
+                           or DEFAULT_SERVICE_DESCRIPTION)
+            if input(
+                    f"Would you like to save this description and not ask for {client['client_name']} in the future? (y/n) ") == "y":
                 config['Descriptions'] = {client_key: description}
                 with open(CONFIG_FILE, 'w') as configfile:
                     config.write(configfile)

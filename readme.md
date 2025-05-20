@@ -11,7 +11,11 @@ The token will be encrypted and saved in your keychain.
 
 ## Usage
 The command takes an optional month as a command line argument.  It is in the format YYYYMM.
-It will prompt you for this if you don't provide it.  On the first run it will ask you for
-your hourly rate to calculate the totals.
+If you don't provide one, it will generate an invoice for last month.
+On the first run it will ask you for your hourly rate to calculate the totals.
 
     python3 invoicer.py [YYYYMM]
+
+## Tips
+Create a cronjob to run it on the first of every month without an arg, 
+and you will always have last month's invoice done.

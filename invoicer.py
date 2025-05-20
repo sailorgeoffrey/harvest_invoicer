@@ -2,13 +2,12 @@ import calendar
 import configparser
 import json
 import locale
+import os
 import sys
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, date
 
 import keyring
-import os
 import requests
-
 from jinja2 import Template
 from markdown_it import MarkdownIt
 from markdown_pdf import MarkdownPdf, Section
@@ -71,7 +70,19 @@ if __name__ == '__main__':
 
     input_month = sys.argv[-1]
     if len(input_month) != 6 or not input_month.isdigit():
-        input_month = input("Enter invoice month (YYYYMM): ")
+        today = date.today()
+        first = today.replace(day=1)
+    else:
+        year = int(input_month[:4])
+        month = int(input_month[-2:])
+        first = date(year, month, 1)
+
+    input_month = first - timedelta(days=1)
+    year = input_month.year
+    month = input_month.month
+    start = datetime(year, month, 1)
+    end_exclusive = (start + timedelta(days=32)).replace(day=1)
+    end_inclusive = datetime(year, month, calendar.monthrange(year, month)[1])
 
     if os.path.isfile(".invoicer_config.ini"):
         config.read(CONFIG_FILE)
@@ -88,11 +99,6 @@ if __name__ == '__main__':
         key = input("Please enter your Harvest API key.\n")
         keyring.set_password("invoicer", "harvest_key", key)
 
-    year = int(input_month[:4])
-    month = int(input_month[-2:])
-    start = datetime(year, month, 1)
-    end_exclusive = (start + timedelta(days=32)).replace(day=1)
-    end_inclusive = datetime(year, month, calendar.monthrange(year, month)[1])
     rate: int = int(config.get('Billing', 'rate'))
     resp = requests.get(
         url="https://api.harvestapp.com/v2/reports/time/clients",
@@ -138,7 +144,7 @@ if __name__ == '__main__':
         invoice_total = invoice_total + line_total
 
     # Create the invoice headers and common elements.
-    due_fn = lambda date: date + +timedelta(days=45)
+    due_fn = lambda end_date: end_date + +timedelta(days=45)
     invoice = {
         "date": (end_inclusive + timedelta(days=1)).strftime("%d %b %Y"),
         "start_date": start.strftime("%d %b %Y"),
@@ -154,7 +160,7 @@ if __name__ == '__main__':
         template = Template(template_file.read(), trim_blocks=True)
     md = template.render(invoice=invoice, items=items)
 
-    convert_markdown_to_pdf(md).save(input_month + "_invoice.pdf")
+    convert_markdown_to_pdf(md).save(input_month.strftime("%Y%m") + "_invoice.pdf")
 
     # output_file = codecs.open(input_month + "_invoice.html", "w", "utf-8")
     # output_file.write(convert_md_to_html(md))

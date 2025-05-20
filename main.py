@@ -14,13 +14,6 @@ from markdown_it import MarkdownIt
 from markdown_pdf import MarkdownPdf, Section
 
 config = configparser.ConfigParser()
-
-descriptions = {
-    'AstraZeneca': "Development and consulting services.",
-    'Evinova': "Development and consulting services.",
-    'About Objects': "Admin"
-}
-
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 
@@ -40,6 +33,7 @@ def generate_markdown(start_date, end_date, invoice_rows, hourly_rate, total):
     with open('template.md', 'r') as template_file:
         template = Template(template_file.read(), trim_blocks=True)
     return template.render(invoice=formatted_invoice, items=invoice_rows)
+
 
 def convert_md_to_html(markdown):
     body = (
@@ -123,11 +117,20 @@ if __name__ == '__main__':
     invoice_total = 0
     items = []
     for client in json.loads(resp.text)["results"]:
+        client_key = client['client_name'].replace(" ", "_").lower()
+        try:
+            description = config.get("Descriptions", client_key)
+        except configparser.NoSectionError:
+            description = input(f"Please enter a description for your work at {client['client_name']}: \n")
+            if input("Would you like to save this description? (y/n) ") == "y":
+                config['Descriptions'] = {client_key: description}
+                with open('config.ini', 'w') as configfile:
+                    config.write(configfile)
         line_total = rate * int(client['total_hours'])
         items.append({
             "client": client['client_name'],
             "hours": client['total_hours'],
-            "description": descriptions.get(client['client_name']),
+            "description": description,
             "total": locale.currency(line_total),
         })
         invoice_total = invoice_total + line_total

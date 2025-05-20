@@ -13,4 +13,4 @@ The command takes an optional month as a command line argument.  It is in the fo
 It will prompt you for this if you don't provide it.  On the first run it will ask you for
 your hourly rate to calculate the totals.
 
-    python invoicer.py [YYYYMM]
+    python3 invoicer.py [YYYYMM]

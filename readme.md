@@ -8,10 +8,7 @@ This script connects to your Harvest account and generates invoices for the mont
 2. Generate a personal access token to [Harvest](https://id.getharvest.com/developers).
    The script will prompt you for the account ID and token on the first run.
    The token will be encrypted and saved in your keychain.
-3. Install the module.
- 
-
-    pip install -e .
+3. Install the module: `pip install -e .`
 
 ## Usage
 

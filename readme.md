@@ -23,13 +23,10 @@ On the first run it will ask you for your hourly rate to calculate the totals.
     invoicer 202504  # Generate invoice for April 2025
     invoicer --preview  # Preview invoice for last month
 
+:bulb: Tip: Create a cronjob to run it on the first of every month and you will always have last month's invoice done.
+
 ## Uninstall
 
 If you want to uninstall the development version:
 
     pip uninstall invoicer 
-
-## Tip
-
-Create a cronjob to run it on the first of every month without an arg,
-and you will always have last month's invoice done.

@@ -1,13 +1,14 @@
 import codecs
-from datetime import date
+import os
 
 from markdown_it import MarkdownIt
 from markdown_pdf import MarkdownPdf, Section
 
-STYLE_FILE = 'style.css'
+PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
+STYLE_FILE = os.path.join(PACKAGE_DIR, 'style.css')
 
 
-def generate_pdf(markdown, prefix=date.today().strftime("%Y%m")):
+def generate_pdf(markdown, file_prefix):
     """Takes Markdown text and converts it to a PDF document.
     """
     pdf = MarkdownPdf()
@@ -15,10 +16,12 @@ def generate_pdf(markdown, prefix=date.today().strftime("%Y%m")):
         Section(markdown),
         user_css=open(STYLE_FILE).read()
     )
-    pdf.save(prefix + "_invoice.pdf")
+    output_filename = file_prefix + ".pdf"
+    pdf.save(output_filename)
+    return output_filename
 
 
-def generate_html(markdown, prefix=date.today().strftime("%Y%m")):
+def generate_html(markdown, file_prefix):
     """Takes Markdown text and converts it to an HTML document.
     Use this to preview the rendered Markdown and adjust CSS.
     There is code commented at the bottom to use this instead of PDF.
@@ -49,7 +52,7 @@ def generate_html(markdown, prefix=date.today().strftime("%Y%m")):
 
     </html>
     """
-
-    output_file = codecs.open(prefix + "_invoice.html", "w", "utf-8")
+    output_filename = file_prefix + ".html"
+    output_file = codecs.open(output_filename, "w", "utf-8")
     output_file.write(output)
     output_file.close()

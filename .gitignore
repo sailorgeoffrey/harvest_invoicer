@@ -1,5 +1,6 @@
 /.venv/
 /.idea/
+__pycache__/
 *.egg-info/
 .invoicer_config.ini
 *_invoice.pdf

@@ -14,7 +14,7 @@ def generate_pdf(markdown, file_prefix):
     pdf = MarkdownPdf()
     pdf.add_section(
         Section(markdown),
-        user_css=open(STYLE_FILE).read()
+        user_css=open(STYLE_FILE, encoding='utf-8').read()
     )
     output_filename = file_prefix + ".pdf"
     pdf.save(output_filename)
@@ -38,7 +38,7 @@ def generate_html(markdown, file_prefix):
         <style type="text/css">
     """
 
-    output += open(STYLE_FILE).read()
+    output += open(STYLE_FILE, encoding='utf-8').read()
 
     output += """
         </style>

@@ -13,7 +13,7 @@ class Config:
         self.config_parser = configparser.ConfigParser()
         self.config_file = config_file
         if os.path.isfile(config_file):
-            self.config_parser.read(config_file)
+            self.config_parser.read(config_file, encoding='utf-8')
         else:
             account_id = input("Please enter your Harvest account ID.\n")
             self.config_parser['Harvest'] = {'account_id': account_id}

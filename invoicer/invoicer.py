@@ -32,7 +32,7 @@ def get_date_range(month_str=None):
 
 
 def render_template(invoice):
-    with open(TEMPLATE_FILE, 'r') as template_file:
+    with open(TEMPLATE_FILE, 'r', encoding='utf-8') as template_file:
         template = Template(template_file.read(), trim_blocks=True)
     return template.render(invoice=invoice, items=invoice.line_items)
 
